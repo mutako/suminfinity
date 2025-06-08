@@ -1,0 +1,75 @@
+<%- include('partials/header') %>
+
+    <h1>My Products</h1>
+
+    <nav>
+        <a href="/products">All Products</a> |
+        <a href="/upload">Upload New Product</a> |
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <table border="1" cellpadding="5" cellspacing="0">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Color</th>
+                <th>Serial</th>
+                <th>Product #</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Image</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (products.length === 0) { %>
+                <tr>
+                    <td colspan="10">You have not uploaded any products yet.</td>
+                </tr>
+                <% } else { %>
+                    <% products.forEach(product => { %>
+                        <tr>
+                            <td>
+                                <%= product.id %>
+                            </td>
+                            <td>
+                                <%= product.type %>
+                            </td>
+                            <td>
+                                <%= product.size %>
+                            </td>
+                            <td>
+                                <%= product.color %>
+                            </td>
+                            <td>
+                                <%= product.serial %>
+                            </td>
+                            <td>
+                                <%= product.product_number %>
+                            </td>
+                            <td>
+                                <%= product.name %>
+                            </td>
+                            <td>$
+                                <%= product.price.toFixed(2) %>
+                            </td>
+                            <td>
+                                <% if (product.image) { %>
+                                    <img src="/uploads/<%= product.image %>" alt="Image" width="100" />
+                                    <% } else { %>
+                                        No image
+                                        <% } %>
+                            </td>
+                            <td>
+                                <a href="/edit-product/<%= product.id %>">Edit</a> |
+                                <a href="/delete-product/<%= product.id %>" onclick="return confirm('Delete this product?')">Delete</a>
+                            </td>
+                        </tr>
+                        <% }) %>
+                            <% } %>
+        </tbody>
+    </table>
+
+    <%- include('partials/footer') %>

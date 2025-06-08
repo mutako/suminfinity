@@ -1,46 +1,81 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
-const db = require('../config/db');
 const router = express.Router();
+const db = require('../config/db');
+const bcrypt = require('bcrypt'); // ensure you're using bcrypt
 
-// prevent logged-in access
-function redirectHome(req, res, next) {
-    if (req.session.userId) return res.redirect('/products');
-    next();
-}
-
-router.get('/register', redirectHome, (req, res) => {
-    res.render('register', { error: null });
-});
-
-router.post('/register', async(req, res) => {
-    const { username, password } = req.body;
-    const hash = await bcrypt.hash(password, 10);
-    db.run('INSERT INTO users (username, password_hash) VALUES (?,?)', [username, hash],
-        (err) => {
-            if (err) return res.render('register', { error: 'Username taken' });
-            res.redirect('/login');
-        });
-});
-
-router.get('/login', redirectHome, (req, res) => {
+router.get('/login', (req, res) => {
+    if (req.session.userId) return res.redirect('/');
     res.render('login', { error: null });
 });
 
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
-    db.get('SELECT * FROM users WHERE username=?', [username], async(err, user) => {
-        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-            return res.render('login', { error: 'Invalid credentials' });
-        }
-        req.session.userId = user.id;
-        req.session.role = user.role;
-        res.redirect('/products');
+    db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
+        if (err || !user) return res.render('login', { error: 'Invalid credentials' });
+        bcrypt.compare(password, user.password, (err, result) => {
+            if (result) {
+                req.session.userId = user.id;
+                req.session.user = user;
+                res.redirect('/');
+            } else {
+                res.render('login', { error: 'Invalid credentials' });
+            }
+        });
     });
 });
 
+router.get('/register', (req, res) => {
+    if (req.session.userId) return res.redirect('/');
+    res.render('register', { error: null });
+});
+
+router.post('/register', (req, res) => {
+    const { username, email, password, password2, phone, city } = req.body;
+
+    console.log('POST /register body:', req.body); // TEMP: Debug log
+
+    if (!username || !email || !password || !password2 || !city) {
+        return res.render('register', { error: 'All fields except phone are required' });
+    }
+
+    if (password !== password2) {
+        return res.render('register', { error: 'Passwords do not match' });
+    }
+
+    // Check if username or email already exists
+    db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, email], (err, existingUser) => {
+        if (err) {
+            return res.render('register', { error: 'Database error' });
+        }
+
+        if (existingUser) {
+            return res.render('register', { error: 'Username or Email already exists' });
+        }
+
+        const hashed = bcrypt.hashSync(password, 10);
+        db.run(
+            `INSERT INTO users (username, email, password, phone, city, role) VALUES (?, ?, ?, ?, ?, ?)`, [username, email, hashed, phone || null, city, 'user'],
+            function(err) {
+                if (err) {
+                    console.error('INSERT ERROR:', err);
+                    return res.render('register', { error: 'Something went wrong during registration' });
+                }
+
+                req.session.userId = this.lastID;
+                req.session.user = { id: this.lastID, username, email, role: 'user' };
+                res.redirect('/');
+            }
+        );
+    });
+});
+
+
+
+
 router.get('/logout', (req, res) => {
-    req.session.destroy(() => res.redirect('/login'));
+    req.session.destroy(() => {
+        res.redirect('/login');
+    });
 });
 
 module.exports = router;

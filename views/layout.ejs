@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+        <%= title || "Product Manager" %>
+    </title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+    <header>
+        <h1><a href="/">Product Manager</a></h1>
+        <nav>
+            <% if (currentUser) { %>
+                <a href="/products">All Products</a>
+                <a href="/products/my">My Products</a>
+                <a href="/upload">Upload Product</a>
+                <a href="/upload-bulk">Bulk Upload</a>
+                <a href="/logout">Logout</a>
+                <% } else { %>
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                    <% } %>
+        </nav>
+        <hr>
+    </header>
+
+    <main>
+        <% if (message) { %>
+            <p class="message">
+                <%= message %>
+            </p>
+            <% } %>
+                <%- body %>
+    </main>
+
+    <footer>
+        <hr>
+        <p>&copy; 2025 Product Manager</p>
+    </footer>
+</body>
+
+</html>

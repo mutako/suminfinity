@@ -1,0 +1,86 @@
+<%- include('partials/header') %>
+
+    <h1>All Products</h1>
+
+    <div>
+        <% if (!currentUser) { %>
+            <a href="/login">Login</a> |
+            <a href="/register">Register</a>
+            <% } else { %>
+                <a href="/products/my">My Products</a> |
+                <a href="/upload">Upload Product</a> |
+                <a href="/logout">Logout</a>
+                <a href="/products">All Products</a> |
+                <a href="/my-products">My Products</a> |
+                <% } %>
+    </div>
+
+    <br />
+
+    <form method="GET" action="/products">
+        <input type="text" name="name" placeholder="Name" value="<%= filters.name || '' %>" />
+        <input type="text" name="type" placeholder="Type" value="<%= filters.type || '' %>" />
+        <input type="text" name="size" placeholder="Size" value="<%= filters.size || '' %>" />
+        <input type="text" name="color" placeholder="Color" value="<%= filters.color || '' %>" />
+        <input type="text" name="serial" placeholder="Serial" value="<%= filters.serial || '' %>" />
+        <input type="text" name="product_number" placeholder="Product Number" value="<%= filters.product_number || '' %>" />
+        <input type="number" name="min_price" placeholder="Min Price" step="0.01" value="<%= filters.min_price || '' %>" />
+        <input type="number" name="max_price" placeholder="Max Price" step="0.01" value="<%= filters.max_price || '' %>" />
+        <button type="submit">Search</button>
+    </form>
+
+
+    <table border="1" cellpadding="5" cellspacing="0">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Color</th>
+                <th>Serial</th>
+                <th>Product #</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Image</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% products.forEach(product => { %>
+                <tr>
+                    <td>
+                        <%= product.id %>
+                    </td>
+                    <td>
+                        <%= product.type %>
+                    </td>
+                    <td>
+                        <%= product.size %>
+                    </td>
+                    <td>
+                        <%= product.color %>
+                    </td>
+                    <td>
+                        <%= product.serial %>
+                    </td>
+                    <td>
+                        <%= product.product_number %>
+                    </td>
+                    <td>
+                        <%= product.name %>
+                    </td>
+                    <td>
+                        <%= product.price.toFixed(2) %>
+                    </td>
+                    <td>
+                        <% if (product.image) { %>
+                            <img src="/uploads/<%= product.image %>" width="100" />
+                            <% } else { %>
+                                No image
+                                <% } %>
+                    </td>
+                </tr>
+                <% }) %>
+        </tbody>
+    </table>
+
+    <%- include('partials/footer') %>
