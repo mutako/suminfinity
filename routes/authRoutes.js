@@ -10,8 +10,14 @@ router.get('/login', (req, res) => {
 
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
-    db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
-        if (err || !user) return res.render('login', { error: 'Invalid credentials' });
+
+    // Modify the query to check both username and email
+    db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], (err, user) => {
+        if (err || !user) {
+            return res.render('login', { error: 'Invalid credentials' });
+        }
+
+        // Compare the entered password with the hashed password in the database
         bcrypt.compare(password, user.password, (err, result) => {
             if (result) {
                 req.session.userId = user.id;
