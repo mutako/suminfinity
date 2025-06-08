@@ -11,14 +11,17 @@ router.get('/login', (req, res) => {
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
 
-    // Modify the query to check both username and email
     db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], (err, user) => {
         if (err || !user) {
+            console.log('User not found or database error:', err);
             return res.render('login', { error: 'Invalid credentials' });
         }
 
-        // Compare the entered password with the hashed password in the database
+        console.log('Fetched user:', user);
+
         bcrypt.compare(password, user.password, (err, result) => {
+            console.log('Password comparison result:', result);
+
             if (result) {
                 req.session.userId = user.id;
                 req.session.user = user;

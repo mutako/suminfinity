@@ -8,19 +8,37 @@ const xlsx = require('xlsx');
 const db = require('../config/db');
 const { requireLogin } = require('../middlewares/auth');
 
-const upload = multer({ dest: path.join(__dirname, '../public/uploads/') });
+// Configure Multer to preserve file extensions
+const storage = multer.diskStorage({
+    destination: path.join(__dirname, '../public/uploads'),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname); // Get the file extension
+        const filename = `${Date.now()}${ext}`; // Create a unique filename with the extension
+        cb(null, filename);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // Limit file size to 5MB
+});
 
 // Helper function to insert many products into the database
 function insertProducts(products, userId, res) {
     const stmt = db.prepare(`
-    INSERT INTO products (type, size, color, serial, product_number, name, price, image, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+        INSERT INTO products (type, size, color, serial, product_number, name, price, image, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
 
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         try {
             products.forEach(product => {
+                // Validate required fields
+                if (!product.type || !product.size || !product.color || !product.name || !product.price) {
+                    throw new Error(`Missing required fields for product: ${JSON.stringify(product)}`);
+                }
+
                 stmt.run(
                     product.type,
                     product.size,
@@ -63,6 +81,9 @@ router.post('/upload-products', requireLogin, upload.single('file'), (req, res) 
         fs.createReadStream(filePath)
             .pipe(csvParser())
             .on('data', (row) => {
+                if (!row.type || !row.size || !row.color || !row.name || !row.price) {
+                    throw new Error('Uploaded file is missing required columns.');
+                }
                 products.push({
                     type: row.type,
                     size: row.size,
@@ -75,6 +96,7 @@ router.post('/upload-products', requireLogin, upload.single('file'), (req, res) 
                 });
             })
             .on('end', () => {
+                console.log('Parsed products:', products);
                 insertProducts(products, userId, res);
             })
             .on('error', (err) => {
@@ -87,6 +109,17 @@ router.post('/upload-products', requireLogin, upload.single('file'), (req, res) 
             const rows = xlsx.utils.sheet_to_json(sheet);
 
             rows.forEach(row => {
+                const missingColumns = [];
+                if (!row.type) missingColumns.push('type');
+                if (!row.size) missingColumns.push('size');
+                if (!row.color) missingColumns.push('color');
+                if (!row.name) missingColumns.push('name');
+                if (!row.price) missingColumns.push('price');
+
+                if (missingColumns.length > 0) {
+                    throw new Error(`Uploaded file is missing required columns: ${missingColumns.join(', ')}`);
+                }
+
                 products.push({
                     type: row.type,
                     size: row.size,
@@ -99,6 +132,7 @@ router.post('/upload-products', requireLogin, upload.single('file'), (req, res) 
                 });
             });
 
+            console.log('Parsed products:', products); // Debug log
             insertProducts(products, userId, res);
         } catch (err) {
             res.status(500).send('Error parsing XLSX file: ' + err.message);
@@ -106,6 +140,29 @@ router.post('/upload-products', requireLogin, upload.single('file'), (req, res) 
     } else {
         res.status(400).send('Invalid file type. Please upload a CSV or XLSX file.');
     }
+});
+
+router.post('/add-product', requireLogin, upload.single('image'), (req, res) => {
+    const { type, size, color, serial, product_number, name, price, image_url } = req.body;
+    const userId = req.session.userId;
+
+    if (!type || !size || !color || !name || !price) {
+        return res.status(400).send('All required fields must be filled.');
+    }
+
+    // Use the uploaded image if provided, otherwise use the image URL
+    const imagePath = req.file ? `/uploads/${req.file.filename}` : image_url || null;
+
+    db.run(
+        `INSERT INTO products (type, size, color, serial, product_number, name, price, image, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [type, size, color, serial || null, product_number || null, name, parseFloat(price), imagePath, userId],
+        function(err) {
+            if (err) {
+                return res.status(500).send('Error adding product: ' + err.message);
+            }
+            res.redirect('/products/my');
+        }
+    );
 });
 
 module.exports = router;

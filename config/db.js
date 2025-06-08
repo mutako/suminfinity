@@ -12,8 +12,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // Create tables if they don't exist
 db.serialize(() => {
-    db.run(`DROP TABLE IF EXISTS users`);
-    db.run(`CREATE TABLE users (
+    db.run(`CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
@@ -37,6 +36,5 @@ db.serialize(() => {
       FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 });
-
 
 module.exports = db;

@@ -131,4 +131,46 @@ router.get('/delete-product/:id', requireLogin, (req, res) => {
     });
 });
 
+router.get('/products/edit/:id', requireLogin, (req, res) => {
+    const productId = req.params.id;
+
+    db.get('SELECT * FROM products WHERE id = ?', [productId], (err, product) => {
+        if (err || !product) {
+            return res.status(404).send('Product not found.');
+        }
+
+        res.render('editProduct', { product });
+    });
+});
+
+router.post('/products/edit/:id', requireLogin, upload.single('image'), (req, res) => {
+    const productId = req.params.id;
+    const { type, size, color, serial, product_number, name, price, image_url } = req.body;
+
+    db.get('SELECT image FROM products WHERE id = ? AND user_id = ?', [productId, req.session.userId], (err, product) => {
+        if (!product) return res.status(404).send('Product not found');
+
+        // Use the uploaded image if provided, otherwise use the image URL
+        const newImage = req.file ? `/uploads/${req.file.filename}` : image_url || product.image;
+
+        // Delete the old image file if a new image is uploaded
+        if (req.file && product.image.startsWith('/uploads/')) {
+            const oldImagePath = path.join(__dirname, '..', 'public', product.image);
+            fs.unlink(oldImagePath, (err) => {
+                if (err) console.error('Failed to delete old image:', err.message);
+            });
+        }
+
+        db.run(
+            `UPDATE products
+             SET type = ?, size = ?, color = ?, serial = ?, product_number = ?, name = ?, price = ?, image = ?
+             WHERE id = ? AND user_id = ?`, [type, size, color, serial || null, product_number || null, name, parseFloat(price), newImage, productId, req.session.userId],
+            (err) => {
+                if (err) return res.status(500).send('Error updating product: ' + err.message);
+                res.redirect('/products/my');
+            }
+        );
+    });
+});
+
 module.exports = router;

@@ -58,10 +58,16 @@
                             </td>
                             <td>
                                 <% if (product.image) { %>
-                                    <img src="/uploads/<%= product.image %>" alt="Image" width="100" />
-                                    <% } else { %>
-                                        No image
-                                        <% } %>
+                                    <% if (product.image.startsWith('/uploads/')) { %>
+                                        <!-- Uploaded image -->
+                                        <img src="<%= product.image %>" alt="<%= product.name %>" width="100" />
+                                        <% } else { %>
+                                            <!-- Image URL -->
+                                            <img src="<%= product.image %>" alt="<%= product.name %>" width="100" />
+                                            <% } %>
+                                                <% } else { %>
+                                                    No image
+                                                    <% } %>
                             </td>
                             <td>
                                 <%= product.username %>
